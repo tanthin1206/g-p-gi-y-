@@ -1,4 +1,4 @@
-# Bài 28 · Xưởng tạo hình
+# Bài học STEM: Tạo hình ngôi nhà và cảnh vật
 
 Webapp dạy học tương tác bằng tiếng Việt: cắt giấy, ghép hình và gấp thuyền theo các hoạt động trang 113–115.
 
