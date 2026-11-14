@@ -4,6 +4,8 @@ function saveCurrentPlace(){
  try{localStorage.setItem(RESUME_KEY,JSON.stringify({version:1,screen:document.body.dataset.screen,lesson:current,tangram,states,selected,cuts:[...workshop.cut],mode:workshop.mode,tray:trayPages.page,solution:tgShowSolution,step,elapsed:foldMotion.elapsed,duration:foldMotion.duration,camera:paperView.tilt}));}catch{}
 }
 function restoreCurrentPlace(){
+ // A fresh visit starts at home; only an explicit browser reload restores play.
+ if(performance.getEntriesByType('navigation')[0]?.type!=='reload')return;
  let saved;try{saved=JSON.parse(localStorage.getItem(RESUME_KEY));}catch{return;}
  if(!saved||saved.version!==1||saved.screen!=='game'||!Number.isInteger(saved.lesson)||saved.lesson<0||saved.lesson>4)return;
  tangram=saved.tangram===1?1:0;
