@@ -174,6 +174,9 @@ body{grid-template-rows:62px minmax(0,1fr);font-size:16px}header{padding:0 26px}
 @media(min-width:761px){#homeScreen>.teacher-credit{margin-bottom:-10px}}
 @media(max-width:760px){#homeScreen>.teacher-credit{margin-bottom:0}}
 
+.music-settings{position:relative;color:#3c634b}.music-settings>summary{list-style:none;cursor:pointer;border-radius:12px;background:#fff;padding:9px 14px;font-size:14px;white-space:nowrap;font-weight:600}.music-settings>summary::-webkit-details-marker{display:none}.music-panel{position:absolute;z-index:1100;right:0;top:calc(100% + 8px);width:240px;padding:14px;background:#fffdf3;border:1px solid #d2ddc3;border-radius:14px;box-shadow:0 8px 28px #294b3b30}.music-panel label{display:grid;grid-template-columns:1fr 40px;gap:8px;margin-top:12px;font-size:14px}.music-panel input{grid-column:1;grid-row:2;width:100%;min-height:30px;accent-color:#39785b}.music-panel output{grid-column:2;grid-row:2;align-self:center;font-size:13px}.music-panel #backgroundMusic{font-size:13px;min-height:36px;width:100%}.music-panel #backgroundMusic:before{display:none}
+@media(max-width:760px){.music-settings>summary{font-size:0;padding:7px 8px;min-width:31px;text-align:center}.music-settings>summary:before{content:'♪';font-size:19px}.music-panel{right:-35px;width:min(240px,calc(100vw - 32px))}.header-actions .music-panel #backgroundMusic{font-size:13px}.header-actions .music-panel #backgroundMusic:before{display:none}}
+
 </style></head>
 <body><header><a class="brand" href="#">✂ <span>XƯỞNG TẠO HÌNH<small>Một bàn thủ công, thật nhiều khám phá</small></span></a><div class="header-actions"><button id="backHome" hidden>⌂ Trang chủ</button><span id="activeGroupLabel" hidden></span><button id="homeFullscreen">⛶ Toàn màn hình</button><button id="sound" aria-pressed="false">♫ Âm thanh: tắt</button></div></header>
 <main id="homeScreen" aria-labelledby="homeTitle">
@@ -1059,17 +1062,26 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)saveCurrent
 for(const event of ['click','change','pointerup','keyup'])document.addEventListener(event,()=>setTimeout(saveCurrentPlace,0));
 
 /* Original quiet instrumental loop, synthesized offline with Web Audio. */
-const backgroundMusic={enabled:true,ctx:null,bus:null,timer:null,next:0,beat:0,nodes:new Set()};
+const backgroundMusic={enabled:true,volume:.85,ctx:null,bus:null,timer:null,next:0,beat:0,nodes:new Set()};
 try{backgroundMusic.enabled=localStorage.getItem('bai28-music')!=='off';}catch{}
+try{const stored=localStorage.getItem('bai28-music-volume');if(stored!==null)backgroundMusic.volume=Math.max(0,Math.min(1,Number(stored)||0));}catch{}
 const musicButton=document.createElement('button');musicButton.id='backgroundMusic';musicButton.type='button';
-$('#sound').before(musicButton);
+const musicSettings=document.createElement('details');musicSettings.className='music-settings';
+const musicSummary=document.createElement('summary');musicSummary.textContent='♪ Nhạc nền';musicSummary.setAttribute('aria-label','Điều chỉnh nhạc nền');
+const musicPanel=document.createElement('div');musicPanel.className='music-panel';
+const volumeLabel=document.createElement('label');volumeLabel.textContent='Âm lượng nhạc';
+const musicVolume=document.createElement('input');musicVolume.type='range';musicVolume.min='0';musicVolume.max='100';musicVolume.step='1';musicVolume.value=String(Math.round(backgroundMusic.volume*100));musicVolume.setAttribute('aria-label','Âm lượng nhạc nền');
+const volumeValue=document.createElement('output');volumeValue.textContent=musicVolume.value+'%';
+volumeLabel.append(musicVolume,volumeValue);musicPanel.append(musicButton,volumeLabel);musicSettings.append(musicSummary,musicPanel);$('#sound').before(musicSettings);
+musicVolume.oninput=()=>{backgroundMusic.volume=Number(musicVolume.value)/100;volumeValue.textContent=musicVolume.value+'%';try{saveProgress('bai28-music-volume',String(backgroundMusic.volume));}catch{}if(backgroundMusic.enabled){startBackgroundMusic();scheduleMusic();}};
+document.addEventListener('pointerdown',e=>{if(!musicSettings.contains(e.target))musicSettings.open=false;});
 function updateMusicButton(){
  const text=`Nhạc nền: ${backgroundMusic.enabled?'bật':'tắt'}`;musicButton.textContent=`♪ ${text}`;musicButton.title=text;musicButton.setAttribute('aria-label',text);musicButton.setAttribute('aria-pressed',String(backgroundMusic.enabled));
 }
 function musicTone(midi,time,length,volume,pad=false){
  const m=backgroundMusic,ctx=m.ctx,voice=ctx.createGain();voice.connect(m.bus);
- voice.gain.setValueAtTime(0,time);voice.gain.linearRampToValueAtTime(volume,time+(pad?.7:.025));voice.gain.exponentialRampToValueAtTime(.0001,time+length);
- for(const [ratio,level]of(pad?[[1,1]]:[[1,.85],[2,.12]])){
+ voice.gain.setValueAtTime(0,time);voice.gain.linearRampToValueAtTime(volume,time+(pad?.7:.025));voice.gain.linearRampToValueAtTime(volume*.5,time+(pad?length*.45:Math.min(.45,length*.4)));voice.gain.exponentialRampToValueAtTime(.0001,time+length);
+ for(const [ratio,level]of(pad?[[1,1]]:[[1,.85],[2,.18],[3,.07]])){
    const osc=ctx.createOscillator(),gain=ctx.createGain();osc.type='sine';osc.frequency.value=440*Math.pow(2,(midi-69)/12)*ratio;gain.gain.value=level;
    osc.connect(gain);gain.connect(voice);m.nodes.add(osc);osc.onended=()=>{m.nodes.delete(osc);osc.disconnect();gain.disconnect();};osc.start(time);osc.stop(time+length+.05);
  }
@@ -1079,7 +1091,7 @@ function scheduleMusic(){
  const m=backgroundMusic;if(!m.enabled||document.hidden||!m.ctx||m.ctx.state!=='running')return;
  const ctx=m.ctx,unit=60/72,chords=[[48,55,60,64],[45,52,57,60],[41,48,53,57],[43,50,55,59]];
  const melody=[72,null,76,79,76,null,74,72,69,null,72,76,72,null,69,67,69,null,72,77,76,null,72,69,71,null,74,79,77,74,72,null];
- const talking='speechSynthesis'in window&&window.speechSynthesis.speaking;m.bus.gain.setTargetAtTime(talking?.35:1.2,ctx.currentTime,.3);
+ const talking='speechSynthesis'in window&&window.speechSynthesis.speaking;m.bus.gain.setTargetAtTime(backgroundMusic.volume*(talking?1.5:8),ctx.currentTime,.3);
  if(m.next<ctx.currentTime)m.next=ctx.currentTime+.08;
  while(m.next<ctx.currentTime+.35){
    const index=m.beat%32,chord=chords[Math.floor(index/8)];
@@ -1092,7 +1104,7 @@ function scheduleMusic(){
 async function startBackgroundMusic(){
  const m=backgroundMusic;if(!m.enabled||document.hidden)return;
  try{
-   if(!m.ctx){const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return;m.ctx=new Audio();m.bus=m.ctx.createGain();m.bus.gain.value=1.2;m.bus.connect(m.ctx.destination);}
+   if(!m.ctx){const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return;m.ctx=new Audio();m.bus=m.ctx.createGain();m.bus.gain.value=m.volume*8;const compressor=m.ctx.createDynamicsCompressor();compressor.threshold.value=-10;compressor.knee.value=16;compressor.ratio.value=4;compressor.attack.value=.01;compressor.release.value=.25;m.bus.connect(compressor);compressor.connect(m.ctx.destination);}
    await m.ctx.resume();if(!m.enabled||document.hidden)return;
    if(!m.timer){m.next=m.ctx.currentTime+.08;scheduleMusic();m.timer=setInterval(scheduleMusic,120);}
  }catch{ /* The next user gesture retries the browser's audio unlock. */ }
