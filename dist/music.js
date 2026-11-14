@@ -12,7 +12,7 @@ const volumeValue=document.createElement('output');volumeValue.textContent=music
 volumeLabel.append(musicVolume,volumeValue);musicPanel.append(musicButton,volumeLabel);musicSettings.append(musicSummary,musicPanel);$('#sound').before(musicSettings);
 musicVolume.oninput=()=>{backgroundMusic.volume=Number(musicVolume.value)/100;volumeValue.textContent=musicVolume.value+'%';updateMusicButton();try{localStorage.setItem('bai28-music-volume',String(backgroundMusic.volume));}catch{}if(backgroundMusic.enabled){startBackgroundMusic();scheduleMusic();}};
 document.addEventListener('pointerdown',e=>{if(!musicSettings.contains(e.target))musicSettings.open=false;});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&musicSettings.open){musicSettings.open=false;musicSummary.focus();}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&musicSettings.open){e.preventDefault();e.stopPropagation();musicSettings.open=false;musicSummary.focus();}});
 function updateMusicButton(){
  const text=`Nhạc nền: ${backgroundMusic.enabled?'bật':'tắt'}`;musicSummary.textContent=`♪ Nhạc nền · ${Math.round(backgroundMusic.volume*100)}%`;musicSummary.title=`${text} · Chạm để chỉnh âm lượng`;musicButton.textContent=`♪ ${text}`;musicButton.title=text;musicButton.setAttribute('aria-label',text);musicButton.setAttribute('aria-pressed',String(backgroundMusic.enabled));
 }
@@ -60,3 +60,21 @@ document.addEventListener('pointerdown',()=>{if(backgroundMusic.enabled&&!backgr
 document.addEventListener('keydown',()=>{if(backgroundMusic.enabled&&!backgroundMusic.timer)startBackgroundMusic();});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)pauseBackgroundMusic();else if(backgroundMusic.ctx)startBackgroundMusic();});
 window.addEventListener('pagehide',pauseBackgroundMusic);updateMusicButton();
+
+// Reuse the same live controls inside modal/fullscreen surfaces; game state is untouched.
+function positionMusicControls(){
+ const dialog=$('#cutDialog'),fullscreen=document.fullscreenElement;
+ if(dialog.open){
+   if(musicSettings.parentElement!==dialog.querySelector('.modal-head')){musicSettings.open=false;dialog.querySelector('.modal-head').insertBefore(musicSettings,$('#closeCut'));}
+   musicSettings.classList.add('music-in-cut');musicSettings.classList.remove('music-in-fullscreen');
+ }else if(fullscreen&&!fullscreen.contains($('#sound'))){
+   if(musicSettings.parentElement!==fullscreen){musicSettings.open=false;fullscreen.appendChild(musicSettings);}
+   musicSettings.classList.remove('music-in-cut');musicSettings.classList.add('music-in-fullscreen');
+ }else{
+   if(musicSettings.parentElement!==$('#sound').parentElement){musicSettings.open=false;$('#sound').before(musicSettings);}
+   musicSettings.classList.remove('music-in-cut','music-in-fullscreen');
+ }
+}
+new MutationObserver(positionMusicControls).observe($('#cutDialog'),{attributes:true,attributeFilter:['open']});
+$('#cutDialog').addEventListener('close',positionMusicControls);
+document.addEventListener('fullscreenchange',positionMusicControls);positionMusicControls();

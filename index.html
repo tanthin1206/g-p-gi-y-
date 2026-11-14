@@ -179,6 +179,10 @@ body{grid-template-rows:62px minmax(0,1fr);font-size:16px}header{padding:0 26px}
 
 .music-panel input{cursor:pointer;touch-action:pan-y;min-height:40px}.music-settings>summary:focus-visible{outline:3px solid #8ab77b;outline-offset:2px}@media(max-width:760px){.music-panel input{min-height:44px}.header-actions .music-panel #backgroundMusic{min-height:44px}.music-panel{max-width:calc(100vw - 24px)}}
 
+.music-settings.music-in-cut{margin-left:auto;flex:none;z-index:20}.music-in-cut .music-panel{right:0;max-width:calc(100vw - 48px)}
+.music-settings.music-in-fullscreen{position:fixed;right:12px;top:10px;z-index:2000}.music-in-fullscreen .music-panel{right:0}
+@media(max-width:760px){.music-in-cut>summary,.music-in-fullscreen>summary{min-height:36px;min-width:36px;display:grid;place-items:center;padding:5px}.music-in-cut .music-panel,.music-in-fullscreen .music-panel{right:0}.music-in-cut .music-panel #backgroundMusic,.music-in-fullscreen .music-panel #backgroundMusic{font-size:13px;min-height:44px}.music-in-cut .music-panel #backgroundMusic:before,.music-in-fullscreen .music-panel #backgroundMusic:before{display:none}}
+
 </style></head>
 <body><header><a class="brand" href="#">✂ <span>XƯỞNG TẠO HÌNH<small>Một bàn thủ công, thật nhiều khám phá</small></span></a><div class="header-actions"><button id="backHome" hidden>⌂ Trang chủ</button><span id="activeGroupLabel" hidden></span><button id="homeFullscreen">⛶ Toàn màn hình</button><button id="sound" aria-pressed="false">♫ Âm thanh: tắt</button></div></header>
 <main id="homeScreen" aria-labelledby="homeTitle">
@@ -1077,7 +1081,7 @@ const volumeValue=document.createElement('output');volumeValue.textContent=music
 volumeLabel.append(musicVolume,volumeValue);musicPanel.append(musicButton,volumeLabel);musicSettings.append(musicSummary,musicPanel);$('#sound').before(musicSettings);
 musicVolume.oninput=()=>{backgroundMusic.volume=Number(musicVolume.value)/100;volumeValue.textContent=musicVolume.value+'%';updateMusicButton();try{saveProgress('bai28-music-volume',String(backgroundMusic.volume));}catch{}if(backgroundMusic.enabled){startBackgroundMusic();scheduleMusic();}};
 document.addEventListener('pointerdown',e=>{if(!musicSettings.contains(e.target))musicSettings.open=false;});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&musicSettings.open){musicSettings.open=false;musicSummary.focus();}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&musicSettings.open){e.preventDefault();e.stopPropagation();musicSettings.open=false;musicSummary.focus();}});
 function updateMusicButton(){
  const text=`Nhạc nền: ${backgroundMusic.enabled?'bật':'tắt'}`;musicSummary.textContent=`♪ Nhạc nền · ${Math.round(backgroundMusic.volume*100)}%`;musicSummary.title=`${text} · Chạm để chỉnh âm lượng`;musicButton.textContent=`♪ ${text}`;musicButton.title=text;musicButton.setAttribute('aria-label',text);musicButton.setAttribute('aria-pressed',String(backgroundMusic.enabled));
 }
@@ -1125,5 +1129,23 @@ document.addEventListener('pointerdown',()=>{if(backgroundMusic.enabled&&!backgr
 document.addEventListener('keydown',()=>{if(backgroundMusic.enabled&&!backgroundMusic.timer)startBackgroundMusic();});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)pauseBackgroundMusic();else if(backgroundMusic.ctx)startBackgroundMusic();});
 window.addEventListener('pagehide',pauseBackgroundMusic);updateMusicButton();
+
+// Reuse the same live controls inside modal/fullscreen surfaces; game state is untouched.
+function positionMusicControls(){
+ const dialog=$('#cutDialog'),fullscreen=document.fullscreenElement;
+ if(dialog.open){
+   if(musicSettings.parentElement!==dialog.querySelector('.modal-head')){musicSettings.open=false;dialog.querySelector('.modal-head').insertBefore(musicSettings,$('#closeCut'));}
+   musicSettings.classList.add('music-in-cut');musicSettings.classList.remove('music-in-fullscreen');
+ }else if(fullscreen&&!fullscreen.contains($('#sound'))){
+   if(musicSettings.parentElement!==fullscreen){musicSettings.open=false;fullscreen.appendChild(musicSettings);}
+   musicSettings.classList.remove('music-in-cut');musicSettings.classList.add('music-in-fullscreen');
+ }else{
+   if(musicSettings.parentElement!==$('#sound').parentElement){musicSettings.open=false;$('#sound').before(musicSettings);}
+   musicSettings.classList.remove('music-in-cut','music-in-fullscreen');
+ }
+}
+new MutationObserver(positionMusicControls).observe($('#cutDialog'),{attributes:true,attributeFilter:['open']});
+$('#cutDialog').addEventListener('close',positionMusicControls);
+document.addEventListener('fullscreenchange',positionMusicControls);positionMusicControls();
 
 </script></body></html>
