@@ -1079,7 +1079,7 @@ function scheduleMusic(){
  const m=backgroundMusic;if(!m.enabled||document.hidden||!m.ctx||m.ctx.state!=='running')return;
  const ctx=m.ctx,unit=60/72,chords=[[48,55,60,64],[45,52,57,60],[41,48,53,57],[43,50,55,59]];
  const melody=[72,null,76,79,76,null,74,72,69,null,72,76,72,null,69,67,69,null,72,77,76,null,72,69,71,null,74,79,77,74,72,null];
- const talking='speechSynthesis'in window&&window.speechSynthesis.speaking;m.bus.gain.setTargetAtTime(talking?.16:.48,ctx.currentTime,.3);
+ const talking='speechSynthesis'in window&&window.speechSynthesis.speaking;m.bus.gain.setTargetAtTime(talking?.35:1.2,ctx.currentTime,.3);
  if(m.next<ctx.currentTime)m.next=ctx.currentTime+.08;
  while(m.next<ctx.currentTime+.35){
    const index=m.beat%32,chord=chords[Math.floor(index/8)];
@@ -1092,7 +1092,7 @@ function scheduleMusic(){
 async function startBackgroundMusic(){
  const m=backgroundMusic;if(!m.enabled||document.hidden)return;
  try{
-   if(!m.ctx){const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return;m.ctx=new Audio();m.bus=m.ctx.createGain();m.bus.gain.value=.48;m.bus.connect(m.ctx.destination);}
+   if(!m.ctx){const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return;m.ctx=new Audio();m.bus=m.ctx.createGain();m.bus.gain.value=1.2;m.bus.connect(m.ctx.destination);}
    await m.ctx.resume();if(!m.enabled||document.hidden)return;
    if(!m.timer){m.next=m.ctx.currentTime+.08;scheduleMusic();m.timer=setInterval(scheduleMusic,120);}
  }catch{ /* The next user gesture retries the browser's audio unlock. */ }
