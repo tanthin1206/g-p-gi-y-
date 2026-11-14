@@ -62,14 +62,15 @@ function pauseBackgroundMusic(){
  m.lastLevel=null;
 }
 
-musicTrackSelect.onchange=()=>{
- const m=backgroundMusic,index=Number(musicTrackSelect.value);if(!Number.isInteger(index)||!MUSIC_TRACKS[index])return;
+function selectMusicTrack(index,play=true){
+ const m=backgroundMusic;if(!Number.isInteger(index)||!MUSIC_TRACKS[index])return;musicTrackSelect.value=String(index);if(m.track===index){if(play&&m.enabled)startBackgroundMusic();return;}
  m.track=index;m.generation++;m.starting=null;if(m.pauseTimer){clearTimeout(m.pauseTimer);m.pauseTimer=null;}
  try{localStorage.setItem('bai28-music-track',MUSIC_TRACKS[index].id);}catch{}
  trackDescription.textContent=MUSIC_TRACKS[index].description;musicStatus.textContent='Đã chọn '+MUSIC_TRACKS[index].name;
  if(m.player){m.player.pause();m.player.src=musicTrackURL();m.player.load();}
- updateMusicButton();if(m.enabled)startBackgroundMusic();
-};
+ updateMusicButton();if(play&&m.enabled)startBackgroundMusic();
+}
+musicTrackSelect.onchange=()=>selectMusicTrack(Number(musicTrackSelect.value));
 musicVolume.oninput=()=>{backgroundMusic.volume=Number(musicVolume.value)/100;volumeValue.textContent=musicVolume.value+'%';try{localStorage.setItem('bai28-music-volume',String(backgroundMusic.volume));}catch{}updateMusicButton();setMusicLevel();if(backgroundMusic.enabled)startBackgroundMusic();};
 musicButton.onclick=()=>{const m=backgroundMusic;if(m.enabled&&m.player&&!m.player.paused){m.enabled=false;pauseBackgroundMusic();musicStatus.textContent='Đã tắt nhạc';}else{m.enabled=true;startBackgroundMusic();}try{localStorage.setItem('bai28-music',m.enabled?'on':'off');}catch{}updateMusicButton();};
 musicSummary.onclick=()=>{if(musicDialog.open)return;const surface=document.fullscreenElement||document.body;if(musicDialog.parentElement!==surface)surface.append(musicDialog);musicDialog.showModal();updateMusicButton();if(backgroundMusic.enabled)startBackgroundMusic();};
@@ -79,3 +80,17 @@ function positionMusicControls(){const dialog=$('#cutDialog'),fs=document.fullsc
 new MutationObserver(positionMusicControls).observe($('#cutDialog'),{attributes:true,attributeFilter:['open']});$('#cutDialog').addEventListener('close',positionMusicControls);document.addEventListener('fullscreenchange',positionMusicControls);
 document.addEventListener('click',()=>{if(backgroundMusic.enabled&&(!backgroundMusic.player||backgroundMusic.player.paused||(backgroundMusic.ctx&&backgroundMusic.ctx.state!=='running')))startBackgroundMusic();},{passive:true});document.addEventListener('keydown',()=>{if(backgroundMusic.enabled&&(!backgroundMusic.player||backgroundMusic.player.paused||(backgroundMusic.ctx&&backgroundMusic.ctx.state!=='running')))startBackgroundMusic();});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)pauseBackgroundMusic();else if(backgroundMusic.player)startBackgroundMusic();});window.addEventListener('pagehide',pauseBackgroundMusic);positionMusicControls();updateMusicButton();
+
+// Distinct soundtracks for the three textbook activities; retain a manual choice
+// while moving between subgames in the same activity.
+function musicActivityForLesson(n){return n===4?'boat':n===2||n===3?'shapes':'house';}
+function setActivityMusic(activity,play=true,restore=false){
+ const m=backgroundMusic;if(m.activity===activity)return;m.activity=activity;
+ let previous;try{previous=localStorage.getItem('bai28-music-activity');}catch{}
+ const index=restore&&previous===activity?m.track:({home:0,house:1,shapes:2,boat:3}[activity]??0);
+ selectMusicTrack(index,play);try{localStorage.setItem('bai28-music-activity',activity);}catch{}
+}
+if(typeof load==='function'){const musicLoad=load;load=function(n){musicLoad(n);setActivityMusic(musicActivityForLesson(n));};}
+if(typeof showHome==='function'){const musicHome=showHome;showHome=function(){musicHome();setActivityMusic('home');};$('#backHome').onclick=showHome;}
+const initialMusicActivity=document.body.dataset?.screen==='game'?musicActivityForLesson(current):'home';
+setActivityMusic(initialMusicActivity,false,initialMusicActivity!=='home');
