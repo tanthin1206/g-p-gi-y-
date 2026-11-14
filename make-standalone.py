@@ -22,6 +22,8 @@ for page in (113,114,115):
     filename=f'assets/thumbnails/activity-{page}.png'
     data=base64.b64encode((dist/filename).read_bytes()).decode('ascii')
     html=html.replace(f'src="{filename}"',f'src="data:image/png;base64,{data}"')
+audio_data=base64.b64encode((dist/'assets/audio/background.mp3').read_bytes()).decode('ascii')
+html=html.replace('assets/audio/background.mp3','data:audio/mpeg;base64,'+audio_data)
 assert not re.search(r'<script[^>]+src=|<link[^>]+stylesheet|assets/page-|assets/thumbnails/|fonts.googleapis|data:image/jpeg|BOOK_ASSETS',html)
 assert html.count('data:image/png;base64,')==3
 output=project/'Bai-28-Tao-hinh.html'
