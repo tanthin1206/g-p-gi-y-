@@ -125,3 +125,5 @@ header{position:relative;z-index:3000;overflow:visible}.header-actions{overflow:
 @media(max-width:760px){.brand-name>b{font-size:11px}.brand .brand-topic{display:none}.home-welcome #homeTitle{font-size:25px;line-height:1.2;margin:7px 0}}
 @media(max-width:760px) and (max-height:700px){.home-welcome #homeTitle{font-size:22px;margin:5px 0}}
 @media(min-width:761px) and (max-height:640px){.home-welcome #homeTitle{font-size:28px;margin:6px 0}.brand .brand-topic{font-size:10px}}
+
+.music-track-label{display:flex;flex-direction:column;gap:7px;font-size:14px;margin:8px 0}.music-track-label select{width:100%;min-height:44px;padding:9px 12px;border:1px solid #c7d4b8;border-radius:10px;background:#fff;color:#385e46;font:inherit;font-size:15px}.music-track-description{font-size:12px;color:#79846d;line-height:1.45;margin:5px 0 14px}.music-dialog{max-height:calc(100dvh - 24px)}

@@ -1,7 +1,15 @@
 /* Original prerecorded instrumental loop: audio playback is independent of game frames. */
 const musicAppleMobile=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-const backgroundMusic={enabled:true,volume:.85,ctx:null,gain:null,player:null,starting:null,pauseTimer:null,ducked:false,lastLevel:null};
+const MUSIC_TRACKS=[
+ {id:'piano',name:'Piano ấm áp',file:'background.mp3',audio:'assets/audio/background.mp3',description:'Piano nhẹ nhàng, đệm rải mềm.'},
+ {id:'garden',name:'Khu vườn nắng',file:'sunny-garden.mp3',audio:'assets/audio/sunny-garden.mp3',description:'Tiếng dây gảy tươi sáng, nhịp vui nhẹ.'},
+ {id:'workshop',name:'Xưởng khéo tay',file:'happy-workshop.mp3',audio:'assets/audio/happy-workshop.mp3',description:'Tiếng mộc lanh lảnh, tiết tấu nhí nhảnh.'},
+ {id:'voyage',name:'Chuyến thuyền nhỏ',file:'little-voyage.mp3',audio:'assets/audio/little-voyage.mp3',description:'Giai điệu sáo mềm, vui và thư thái.'}
+];
+const backgroundMusic={enabled:true,volume:.85,track:0,generation:0,ctx:null,gain:null,player:null,starting:null,pauseTimer:null,ducked:false,lastLevel:null};
 try{backgroundMusic.enabled=localStorage.getItem('bai28-music')!=='off';const v=localStorage.getItem('bai28-music-volume');if(v!==null)backgroundMusic.volume=Math.max(0,Math.min(1,Number(v)||0));}catch{}
+try{const saved=localStorage.getItem('bai28-music-track');const i=MUSIC_TRACKS.findIndex(t=>t.id===saved);if(i>=0)backgroundMusic.track=i;}catch{}
+function musicTrackURL(){const t=MUSIC_TRACKS[backgroundMusic.track];if(!/^https?:$/.test(location.protocol))return t.audio;const script=document.querySelector('script[src$="music.js"]'),relative=['assets','audio',t.file].join('/');return new URL(script?relative:'dist/'+relative,script?.src||document.baseURI).href;}
 const musicSettings=document.createElement('div');musicSettings.className='music-settings';
 const musicSummary=document.createElement('button');musicSummary.className='music-trigger';musicSummary.type='button';musicSummary.setAttribute('aria-label','Điều chỉnh nhạc nền');musicSummary.setAttribute('aria-haspopup','dialog');musicSettings.append(musicSummary);$('#sound').before(musicSettings);
 const musicDialog=document.createElement('dialog');musicDialog.className='music-dialog';musicDialog.setAttribute('aria-labelledby','musicDialogTitle');
@@ -10,6 +18,11 @@ const musicButton=document.createElement('button');musicButton.id='backgroundMus
 const volumeLabel=document.createElement('label');volumeLabel.className='music-volume-label';volumeLabel.textContent='Âm lượng nhạc';
 const musicVolume=document.createElement('input');musicVolume.id='musicVolume';musicVolume.type='range';musicVolume.min='0';musicVolume.max='100';musicVolume.step='1';musicVolume.value=String(Math.round(backgroundMusic.volume*100));musicVolume.setAttribute('aria-label','Âm lượng nhạc nền');
 const volumeValue=document.createElement('output');volumeValue.setAttribute('for','musicVolume');volumeValue.textContent=musicVolume.value+'%';volumeLabel.append(musicVolume,volumeValue);if(musicAppleMobile){volumeLabel.hidden=true;const hint=document.createElement('p');hint.className='music-description';hint.textContent='iPhone/iPad: dùng nút âm lượng bên hông máy để chỉnh tiếng nhạc.';musicDialog.append(hint);}
+const trackLabel=document.createElement('label');trackLabel.className='music-track-label';trackLabel.textContent='Chọn bài nhạc';
+const musicTrackSelect=document.createElement('select');musicTrackSelect.id='musicTrack';musicTrackSelect.setAttribute('aria-label','Chọn bài nhạc');
+MUSIC_TRACKS.forEach((t,i)=>{const option=document.createElement('option');option.value=String(i);option.textContent=t.name;musicTrackSelect.append(option);});musicTrackSelect.value=String(backgroundMusic.track);
+const trackDescription=document.createElement('p');trackDescription.className='music-track-description';trackDescription.textContent=MUSIC_TRACKS[backgroundMusic.track].description;
+trackLabel.append(musicTrackSelect);musicDialog.append(trackLabel,trackDescription);
 const musicStatus=document.createElement('p');musicStatus.className='music-playback-status';musicStatus.setAttribute('role','status');musicDialog.append(musicButton,volumeLabel,musicStatus);document.body.append(musicDialog);
 function updateMusicButton(){const m=backgroundMusic,playing=m.enabled&&m.player&&!m.player.paused,text=playing?'Tắt nhạc':'Phát nhạc';musicSummary.textContent=musicAppleMobile?'♪ Nhạc nền':`♪ Nhạc nền · ${Math.round(m.volume*100)}%`;musicSummary.title='Điều chỉnh nhạc nền';musicButton.textContent=`${playing?'Ⅱ':'▶'} ${text}`;musicButton.setAttribute('aria-label',text);musicButton.setAttribute('aria-pressed',String(!!playing));musicSummary.setAttribute('aria-expanded',String(musicDialog.open));}
 function setMusicLevel(){
@@ -21,11 +34,11 @@ function setMusicDucking(active){backgroundMusic.ducked=!!active;setMusicLevel()
 async function startBackgroundMusic(){
  const m=backgroundMusic;if(!m.enabled||document.hidden)return;if(m.starting)return m.starting;
  if(m.pauseTimer){clearTimeout(m.pauseTimer);m.pauseTimer=null;}
+ const generation=m.generation;
  m.starting=(async()=>{
   try{
    if(!m.player){
-    let track='assets/audio/background.mp3';
-    if(/^https?:$/.test(location.protocol)){const script=document.querySelector('script[src$="music.js"]');const relative=['assets','audio','background.mp3'].join('/');track=new URL(script?relative:'dist/'+relative,script?.src||document.baseURI).href;}
+    const track=musicTrackURL();
     const player=new window.Audio(track);player.id='backgroundMusicAudio';player.hidden=true;player.loop=true;player.preload='auto';player.setAttribute('playsinline','');document.body.append(player);m.player=player;
     const AudioContext=window.AudioContext||window.webkitAudioContext;
     if(AudioContext&&!musicAppleMobile){m.ctx=new AudioContext({latencyHint:'playback'});const source=m.ctx.createMediaElementSource(player);m.gain=m.ctx.createGain();m.gain.gain.value=0;source.connect(m.gain);m.gain.connect(m.ctx.destination);}
@@ -38,9 +51,9 @@ async function startBackgroundMusic(){
    const play=m.player.paused?m.player.play():Promise.resolve();
    await Promise.all([resume,play]);
    if(!m.enabled||document.hidden)pauseBackgroundMusic();
-  }catch{musicStatus.textContent='Bấm ▶ Phát nhạc để cho phép trình duyệt phát âm thanh.';updateMusicButton();}
+  }catch{if(generation===m.generation){musicStatus.textContent='Bấm ▶ Phát nhạc để cho phép trình duyệt phát âm thanh.';updateMusicButton();}}
  })();
- try{await m.starting;}finally{m.starting=null;}
+ try{await m.starting;}finally{if(generation===m.generation)m.starting=null;}
 }
 function pauseBackgroundMusic(){
  const m=backgroundMusic;if(m.pauseTimer)clearTimeout(m.pauseTimer);
@@ -49,6 +62,14 @@ function pauseBackgroundMusic(){
  m.lastLevel=null;
 }
 
+musicTrackSelect.onchange=()=>{
+ const m=backgroundMusic,index=Number(musicTrackSelect.value);if(!Number.isInteger(index)||!MUSIC_TRACKS[index])return;
+ m.track=index;m.generation++;m.starting=null;if(m.pauseTimer){clearTimeout(m.pauseTimer);m.pauseTimer=null;}
+ try{localStorage.setItem('bai28-music-track',MUSIC_TRACKS[index].id);}catch{}
+ trackDescription.textContent=MUSIC_TRACKS[index].description;musicStatus.textContent='Đã chọn '+MUSIC_TRACKS[index].name;
+ if(m.player){m.player.pause();m.player.src=musicTrackURL();m.player.load();}
+ updateMusicButton();if(m.enabled)startBackgroundMusic();
+};
 musicVolume.oninput=()=>{backgroundMusic.volume=Number(musicVolume.value)/100;volumeValue.textContent=musicVolume.value+'%';try{localStorage.setItem('bai28-music-volume',String(backgroundMusic.volume));}catch{}updateMusicButton();setMusicLevel();if(backgroundMusic.enabled)startBackgroundMusic();};
 musicButton.onclick=()=>{const m=backgroundMusic;if(m.enabled&&m.player&&!m.player.paused){m.enabled=false;pauseBackgroundMusic();musicStatus.textContent='Đã tắt nhạc';}else{m.enabled=true;startBackgroundMusic();}try{localStorage.setItem('bai28-music',m.enabled?'on':'off');}catch{}updateMusicButton();};
 musicSummary.onclick=()=>{if(musicDialog.open)return;const surface=document.fullscreenElement||document.body;if(musicDialog.parentElement!==surface)surface.append(musicDialog);musicDialog.showModal();updateMusicButton();if(backgroundMusic.enabled)startBackgroundMusic();};
