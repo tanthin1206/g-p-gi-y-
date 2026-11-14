@@ -10,10 +10,11 @@ const volumeLabel=document.createElement('label');volumeLabel.textContent='Âm l
 const musicVolume=document.createElement('input');musicVolume.type='range';musicVolume.min='0';musicVolume.max='100';musicVolume.step='1';musicVolume.value=String(Math.round(backgroundMusic.volume*100));musicVolume.setAttribute('aria-label','Âm lượng nhạc nền');
 const volumeValue=document.createElement('output');volumeValue.textContent=musicVolume.value+'%';
 volumeLabel.append(musicVolume,volumeValue);musicPanel.append(musicButton,volumeLabel);musicSettings.append(musicSummary,musicPanel);$('#sound').before(musicSettings);
-musicVolume.oninput=()=>{backgroundMusic.volume=Number(musicVolume.value)/100;volumeValue.textContent=musicVolume.value+'%';try{localStorage.setItem('bai28-music-volume',String(backgroundMusic.volume));}catch{}if(backgroundMusic.enabled){startBackgroundMusic();scheduleMusic();}};
+musicVolume.oninput=()=>{backgroundMusic.volume=Number(musicVolume.value)/100;volumeValue.textContent=musicVolume.value+'%';updateMusicButton();try{localStorage.setItem('bai28-music-volume',String(backgroundMusic.volume));}catch{}if(backgroundMusic.enabled){startBackgroundMusic();scheduleMusic();}};
 document.addEventListener('pointerdown',e=>{if(!musicSettings.contains(e.target))musicSettings.open=false;});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&musicSettings.open){musicSettings.open=false;musicSummary.focus();}});
 function updateMusicButton(){
- const text=`Nhạc nền: ${backgroundMusic.enabled?'bật':'tắt'}`;musicButton.textContent=`♪ ${text}`;musicButton.title=text;musicButton.setAttribute('aria-label',text);musicButton.setAttribute('aria-pressed',String(backgroundMusic.enabled));
+ const text=`Nhạc nền: ${backgroundMusic.enabled?'bật':'tắt'}`;musicSummary.textContent=`♪ Nhạc nền · ${Math.round(backgroundMusic.volume*100)}%`;musicSummary.title=`${text} · Chạm để chỉnh âm lượng`;musicButton.textContent=`♪ ${text}`;musicButton.title=text;musicButton.setAttribute('aria-label',text);musicButton.setAttribute('aria-pressed',String(backgroundMusic.enabled));
 }
 function musicTone(midi,time,length,volume,pad=false){
  const m=backgroundMusic,ctx=m.ctx,voice=ctx.createGain();voice.connect(m.bus);
