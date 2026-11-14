@@ -1,0 +1,5 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+function node(){return{children:[],style:{setProperty(){}},setAttribute(){},removeAttribute(){},append(...nodes){this.children.push(...nodes)},appendChild(n){this.children.push(n)},replaceChildren(){this.children=[]}}}
+const host=node(),jobs=[];const c=vm.createContext({document:{createElement:node},$:()=>host,current:3,workshop:{reduced:false},setTimeout:f=>{jobs.push(f);return jobs.length},clearTimeout(){},Math});
+const src=fs.readFileSync('dist/workshop.js','utf8');vm.runInContext(src.slice(src.indexOf('var celebrationTimer='),src.indexOf("$('#cutMode').onchange")),c);
+vm.runInContext('celebrate()',c);assert.equal(host.children[0].children[1].textContent,'Em đã ghép khớp đủ 7 mảnh!');assert.equal(host.children[1].children.reduce((n,b)=>n+b.children.length,0),80);jobs.at(-1)();assert.equal(host.children.length,0);vm.runInContext('workshop.reduced=true;celebrate()',c);assert.equal(host.children[0].children[0].textContent,'🎉 Chúc mừng em!');console.log('PASS: completion message, 4 firework bursts, cleanup and reduced-motion notice.');

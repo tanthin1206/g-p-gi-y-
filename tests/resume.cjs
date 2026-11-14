@@ -1,0 +1,7 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const code=fs.readFileSync('dist/session-state.js','utf8');
+const data={version:1,screen:'game',lesson:4,step:5,elapsed:2100,duration:9000,camera:.85};
+const events={},elements={};let stored=data;
+const c=vm.createContext({console,JSON,Number,Math,Set,Object,setTimeout:fn=>fn(),localStorage:{getItem:()=>JSON.stringify(stored),setItem:(k,v)=>stored=JSON.parse(v)},window:{addEventListener:(k,fn)=>events[k]=fn},document:{body:{dataset:{screen:'home'}},addEventListener(){}},$:s=>elements[s]||=( {} )});
+vm.runInContext(`let current=0,tangram=0,states={},selected=null,step=0;const parts=[],workshop={cut:new Set(),mode:true},trayPages={page:0},paperView={tilt:.48},foldMotion={elapsed:0,duration:6500};let tgShowSolution=false;function load(n){current=n;document.body.dataset.screen='game'}function stopFoldDemo(){}function renderFold(){}function cancelFoldFrame(){}function updateFoldControls(){}function drawFoldFrame(t){globalThis.drawn=t}function render(){}`,c);
+vm.runInContext(code,c);assert.equal(vm.runInContext('step',c),5);assert.equal(c.drawn,2100);assert.equal(vm.runInContext('foldMotion.playing',c),false);events.pagehide();assert.equal(stored.lesson,4);assert.equal(stored.elapsed,2100);vm.runInContext("document.body.dataset.screen='home';saveCurrentPlace()",c);assert.equal(stored.screen,'home');console.log('PASS: restore activity, boat step and exact animation progress; save home and pagehide.');

@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+boat-frames.json
+.DS_Store
+Thumbs.db
