@@ -78,3 +78,21 @@ function positionMusicControls(){
 new MutationObserver(positionMusicControls).observe($('#cutDialog'),{attributes:true,attributeFilter:['open']});
 $('#cutDialog').addEventListener('close',positionMusicControls);
 document.addEventListener('fullscreenchange',positionMusicControls);positionMusicControls();
+
+// Native popovers paint above the game and dialog, rather than inside clipped panels.
+const musicUsesPopover=typeof musicPanel.showPopover==='function';
+if(musicUsesPopover)musicPanel.setAttribute('popover','manual');
+function placeMusicPopover(){
+ if(!musicUsesPopover||!musicSettings.open)return;
+ const anchor=musicSummary.getBoundingClientRect(),width=Math.min(268,window.innerWidth-24);
+ musicPanel.style.position='fixed';musicPanel.style.margin='0';musicPanel.style.inset='auto';
+ musicPanel.style.width=width+'px';musicPanel.style.maxWidth='calc(100vw - 24px)';
+ musicPanel.style.left=Math.max(12,Math.min(anchor.right-width,window.innerWidth-width-12))+'px';
+ musicPanel.style.top=Math.max(8,Math.min(anchor.bottom+8,window.innerHeight-195))+'px';
+}
+musicSettings.addEventListener('toggle',()=>{
+ if(!musicUsesPopover)return;
+ if(musicSettings.open){placeMusicPopover();if(!musicPanel.matches(':popover-open'))musicPanel.showPopover();}
+ else if(musicPanel.matches(':popover-open'))musicPanel.hidePopover();
+});
+window.addEventListener('resize',placeMusicPopover);
