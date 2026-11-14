@@ -74,10 +74,12 @@ function drawFoldFrame(elapsed){
   $('#foldMotionStatus').textContent=foldMotion.playing?`Đang tự gấp · Bước ${step+1}/8`:foldMotion.paused?'Đã tạm dừng':t<1?'Quan sát chiều gấp và nếp gấp trên giấy':'Đã minh họa xong bước này. Làm theo bằng giấy thật nhé!';
 }
 function playFoldFrames(){
-  cancelFoldFrame();foldMotion.start=performance.now()-foldMotion.elapsed;
+  cancelFoldFrame();foldMotion.start=performance.now()-foldMotion.elapsed;let lastPaint=-Infinity;
   const tick=now=>{
     if(current!==4){stopFoldDemo();return;}
-    foldMotion.elapsed=Math.min(foldMotion.duration,now-foldMotion.start);drawFoldFrame(foldMotion.elapsed);
+    foldMotion.elapsed=Math.min(foldMotion.duration,now-foldMotion.start);
+    if(typeof innerWidth==='number'&&innerWidth<=760&&foldMotion.elapsed<foldMotion.duration&&now-lastPaint<33){foldMotion.raf=requestAnimationFrame(tick);return;}
+    lastPaint=now;drawFoldFrame(foldMotion.elapsed);
     if(foldMotion.elapsed<foldMotion.duration){foldMotion.raf=requestAnimationFrame(tick);return;}
     foldMotion.raf=0;
     if(foldMotion.playing){
